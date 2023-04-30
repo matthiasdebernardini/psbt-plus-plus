@@ -1,16 +1,19 @@
 use bdk::psbt;
 use std::str::FromStr;
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     // Example stuff:
     label: String,
-
     // this how you opt-out of serialization of a member
     #[serde(skip)]
     value: f32,
+    #[serde(skip)]
     psbt: String,
+    #[serde(skip)]
+    show_psbt: bool,
 }
 
 impl Default for TemplateApp {
@@ -20,6 +23,7 @@ impl Default for TemplateApp {
             label: "Hello World!".to_owned(),
             value: 2.7,
             psbt: "".to_owned(),
+            show_psbt: false,
         }
     }
 }
@@ -49,7 +53,12 @@ impl eframe::App for TemplateApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let Self { label, value, psbt } = self;
+        let Self {
+            label,
+            value,
+            psbt,
+            show_psbt,
+        } = self;
 
         // Examples of how to create different panels and windows.
         // Pick whichever suits you.
@@ -104,12 +113,20 @@ impl eframe::App for TemplateApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             if ui.small_button("check").clicked() {
-                if bitcoin::psbt::PartiallySignedTransaction::from_str(&self.psbt.as_str()).is_ok()
-                {
-                    println!("{}", &self.psbt);
+                let psbt = bitcoin::psbt::PartiallySignedTransaction::from_str(&self.psbt.as_str());
+                if psbt.is_ok() {
+                    self.show_psbt = true;
+                    println!("{:?}", psbt);
                 };
-                self.psbt.clear();
             };
+            if self.show_psbt {
+                egui::Window::new("Window").show(ctx, |ui| {
+                    ui.label("Windows can be moved by dragging them.");
+                    ui.label("They are automatically sized based on contents.");
+                    ui.label("You can turn on resizing and scrolling if you like.");
+                    ui.label("You would normally choose either panels OR windows.");
+                });
+            }
             ui.add_sized(
                 ui.available_size(),
                 egui::TextEdit::multiline(&mut self.psbt),
