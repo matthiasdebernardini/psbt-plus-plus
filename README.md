@@ -1,4 +1,14 @@
-# eframe template
+# PSBT plus plus
+
+This is an app that lets you easily compare psbt's and shows the data.
+
+# Instructions
+ - clone repo
+ - step into dir
+ - `cargo run`
+ 
+ <img width="1796" alt="image" src="https://user-images.githubusercontent.com/32387851/235367270-bb3e69b3-4a4f-4f81-9d2d-70ac34ab40f5.png">
+
 
 [![dependency status](https://deps.rs/repo/github/emilk/eframe_template/status.svg)](https://deps.rs/repo/github/emilk/eframe_template)
 [![Build Status](https://github.com/emilk/eframe_template/workflows/CI/badge.svg)](https://github.com/emilk/eframe_template/actions?workflow=CI)
