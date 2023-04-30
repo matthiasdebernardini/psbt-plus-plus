@@ -1,29 +1,31 @@
 use bdk::psbt;
+use egui::widget_text::RichText;
+use egui::Color32;
 use std::str::FromStr;
-
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
-    // Example stuff:
-    label: String,
-    // this how you opt-out of serialization of a member
     #[serde(skip)]
-    value: f32,
+    psbt_1: String,
     #[serde(skip)]
-    psbt: String,
+    psbt_2: String,
     #[serde(skip)]
-    show_psbt: bool,
+    show_psbt_1: bool,
+    #[serde(skip)]
+    show_psbt_2: bool,
+    #[serde(skip)]
+    equal_psbt: bool,
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
-            // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
-            psbt: "".to_owned(),
-            show_psbt: false,
+            psbt_1: "".to_owned(),
+            psbt_2: "".to_owned(),
+            show_psbt_1: false,
+            show_psbt_2: false,
+            equal_psbt: false,
         }
     }
 }
@@ -54,10 +56,11 @@ impl eframe::App for TemplateApp {
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let Self {
-            label,
-            value,
-            psbt,
-            show_psbt,
+            psbt_1,
+            psbt_2,
+            show_psbt_1,
+            show_psbt_2,
+            equal_psbt,
         } = self;
 
         // Examples of how to create different panels and windows.
@@ -82,16 +85,6 @@ impl eframe::App for TemplateApp {
 
             egui::warn_if_debug_build(ui);
 
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(label);
-            });
-
-            ui.add(egui::Slider::new(value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                *value += 1.0;
-            }
-
             ui.add(egui::github_link_file!(
                 "https://github.com/matthiasdebernardini/psbt-plus-plus/blob/master/",
                 "Source code."
@@ -102,35 +95,105 @@ impl eframe::App for TemplateApp {
                     ui.label("powered by ");
                     ui.hyperlink_to("egui", "https://github.com/emilk/egui");
                     ui.label(" and ");
-                    ui.hyperlink_to(
-                        "eframe",
-                        "https://github.com/emilk/egui/tree/master/crates/eframe",
-                    );
+                    ui.hyperlink_to("bdk", "https://github.com/bitcoindevkit/bdk");
                     ui.label(".");
                 });
             });
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            if ui.small_button("check").clicked() {
-                let psbt = bitcoin::psbt::PartiallySignedTransaction::from_str(&self.psbt.as_str());
-                if psbt.is_ok() {
-                    self.show_psbt = true;
-                    println!("{:?}", psbt);
+            if ui.small_button("check_1").clicked() {
+                let _psbt =
+                    bitcoin::psbt::PartiallySignedTransaction::from_str(&self.psbt_1.as_str());
+                if _psbt.is_ok() {
+                    self.show_psbt_1 = true;
                 };
-            };
-            if self.show_psbt {
-                egui::Window::new("Window").show(ctx, |ui| {
-                    ui.label("Windows can be moved by dragging them.");
-                    ui.label("They are automatically sized based on contents.");
-                    ui.label("You can turn on resizing and scrolling if you like.");
-                    ui.label("You would normally choose either panels OR windows.");
-                });
             }
-            ui.add_sized(
-                ui.available_size(),
-                egui::TextEdit::multiline(&mut self.psbt),
-            );
+            if self.show_psbt_1 {
+                let _psbt =
+                    bitcoin::psbt::PartiallySignedTransaction::from_str(&self.psbt_1.as_str())
+                        .unwrap();
+                let unsigned_tx = _psbt.clone().unsigned_tx;
+                let unsigned_tx = format!("{:?}", unsigned_tx);
+
+                let inputs = _psbt.clone().inputs;
+                let inputs = format!("{:?}", inputs);
+
+                let outputs = _psbt.clone().outputs;
+                let outputs = format!("{:?}", outputs);
+
+                let xpub = _psbt.clone().xpub;
+                for p in &xpub {
+                    println!("{p:?}");
+                }
+                let label = match self.equal_psbt {
+                    true => RichText::new("First PSBT").color(Color32::from_rgb(110, 255, 110)),
+                    false => RichText::new("First PSBT"),
+                };
+
+                egui::Window::new(label).show(ctx, |ui| {
+                    ui.collapsing("unsigned tx", |ui| {
+                        ui.label(unsigned_tx);
+                    });
+                    ui.collapsing("inputs", |ui| {
+                        ui.label(inputs);
+                    });
+                    ui.collapsing("outputs", |ui| {
+                        ui.label(outputs);
+                    });
+                });
+            };
+            ui.add(egui::TextEdit::multiline(&mut self.psbt_1));
+
+            if ui.small_button("check_2").clicked() {
+                let _psbt =
+                    bitcoin::psbt::PartiallySignedTransaction::from_str(&self.psbt_2.as_str());
+                if _psbt.is_ok() {
+                    self.show_psbt_2 = true;
+                };
+            }
+            if self.psbt_1 == self.psbt_2 {
+                self.equal_psbt = true
+            } else {
+                self.equal_psbt = false
+            };
+            if self.show_psbt_2 {
+                let _psbt =
+                    bitcoin::psbt::PartiallySignedTransaction::from_str(&self.psbt_2.as_str())
+                        .unwrap();
+                let unsigned_tx = _psbt.clone().unsigned_tx;
+                let unsigned_tx = format!("{:?}", unsigned_tx);
+
+                let inputs = _psbt.clone().inputs;
+                let inputs = format!("{:?}", inputs);
+
+                let outputs = _psbt.clone().outputs;
+                let outputs = format!("{:?}", outputs);
+
+                let xpub = _psbt.clone().xpub;
+                for p in &xpub {
+                    println!("{p:?}");
+                }
+                let label = match self.equal_psbt {
+                    true => RichText::new("Second PSBT").color(Color32::from_rgb(110, 255, 110)),
+                    false => RichText::new("Second PSBT"),
+                };
+
+                egui::Window::new(label)
+                    //.frame(my_frame)
+                    .show(ctx, |ui| {
+                        ui.collapsing("unsigned tx", |ui| {
+                            ui.label(unsigned_tx);
+                        });
+                        ui.collapsing("inputs", |ui| {
+                            ui.label(inputs);
+                        });
+                        ui.collapsing("outputs", |ui| {
+                            ui.label(outputs);
+                        });
+                    });
+            };
+            ui.add(egui::TextEdit::multiline(&mut self.psbt_2));
         });
     }
 }
